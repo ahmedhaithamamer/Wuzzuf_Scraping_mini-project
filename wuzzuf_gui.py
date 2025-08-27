@@ -1003,12 +1003,12 @@ Built with Python, Selenium, and CustomTkinter
             
             # Save data to files
             if self.scraper.jobs_data:
-                # Save data using the scraper's save method
+                # Save data using the scraper's save method (now returns session folder)
                 timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
                 filename_prefix = f"wuzzuf_jobs_{keyword.replace(' ', '_')}"
                 
-                self.scraper.save_data(filename_prefix)
-                self.scraping_queue.put(('complete', len(self.scraper.jobs_data)))
+                session_folder = self.scraper.save_data(filename_prefix)
+                self.scraping_queue.put(('complete', (len(self.scraper.jobs_data), session_folder)))
             else:
                 self.scraping_queue.put(('error', 'No data collected'))
                 
@@ -1040,18 +1040,36 @@ Built with Python, Selenium, and CustomTkinter
                 if message_type == 'log':
                     self.log(data)
                 elif message_type == 'complete':
+                    # Handle new tuple format: (job_count, session_folder)
+                    if isinstance(data, tuple):
+                        job_count, session_folder = data
+                    else:
+                        # Handle old format for backward compatibility
+                        job_count = data
+                        session_folder = "."
+                    
                     self.scraping_stats['end_time'] = datetime.now()
-                    self.scraping_stats['total_jobs'] = data
+                    self.scraping_stats['total_jobs'] = job_count
                     self.animation_running = False
                     
                     elapsed = self.scraping_stats['end_time'] - self.scraping_stats['start_time']
                     elapsed_str = str(elapsed).split('.')[0]
                     
-                    self.log(f"✅ Scraping completed! Collected {data} jobs in {elapsed_str}")
-                    self.log(f"💾 Data saved to CSV and JSON files")
+                    self.log(f"✅ Scraping completed! Collected {job_count} jobs in {elapsed_str}")
+                    if session_folder != ".":
+                        self.log(f"📁 Data saved to session folder: {session_folder}")
+                    else:
+                        self.log(f"💾 Data saved to CSV and JSON files")
+                    
                     self.progress_bar.set(1.0)
-                    self.progress_label.configure(text=f"Completed! {data} jobs saved in {elapsed_str}")
-                    self.status_var.set(f"✅ Scraping completed - {data} jobs saved")
+                    self.progress_label.configure(text=f"Completed! {job_count} jobs saved in {elapsed_str}")
+                    
+                    # Update status with session folder info
+                    if session_folder != ".":
+                        session_name = Path(session_folder).name
+                        self.status_var.set(f"✅ Scraping completed - {job_count} jobs saved to {session_name}")
+                    else:
+                        self.status_var.set(f"✅ Scraping completed - {job_count} jobs saved")
                     
                     # Reset UI
                     self.start_btn.configure(state="normal")
@@ -1061,7 +1079,10 @@ Built with Python, Selenium, and CustomTkinter
                     self.update_quick_stats()
                     
                     # Show success notification
-                    self.show_notification(f"Scraping completed! {data} jobs saved to files in {elapsed_str}", "success", 5000)
+                    if session_folder != ".":
+                        self.show_notification(f"Scraping completed! {job_count} jobs saved to session folder in {elapsed_str}", "success", 5000)
+                    else:
+                        self.show_notification(f"Scraping completed! {job_count} jobs saved to files in {elapsed_str}", "success", 5000)
                     
                     # Try to load the scraped data
                     self.load_latest_scraped_data()
