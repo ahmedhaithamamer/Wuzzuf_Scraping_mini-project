@@ -16,6 +16,8 @@ import json
 import csv
 from datetime import datetime
 import random
+import os
+from pathlib import Path
 
 class SimpleWuzzufScraper:
     def __init__(self, headless=False):
@@ -31,6 +33,12 @@ class SimpleWuzzufScraper:
             chrome_options.add_argument("--headless")
         chrome_options.add_argument("--no-sandbox")
         chrome_options.add_argument("--disable-dev-shm-usage")
+        chrome_options.add_argument("--disable-logging")
+        chrome_options.add_argument("--disable-gpu")
+        chrome_options.add_argument("--disable-extensions")
+        chrome_options.add_argument("--disable-plugins")
+        chrome_options.add_argument("--log-level=3")
+        chrome_options.add_experimental_option('excludeSwitches', ['enable-logging'])
         
         try:
             # Auto-install ChromeDriver
@@ -77,32 +85,16 @@ class SimpleWuzzufScraper:
                 # Check if we're getting new jobs (not duplicates)
                 current_total = len(self.jobs_data)
                 if current_total == total_jobs_before:
-                    print("⚠️ No new jobs found, might be on same page")
                     # Try to force page refresh and wait longer
-                    print("🔄 Refreshing page and waiting...")
                     self.driver.refresh()
                     time.sleep(5)  # Longer wait for refresh
                     continue
                 
                 total_jobs_before = current_total
-                print(f"📊 Total jobs collected so far: {current_total}")
                 
-                # Additional check: verify we're not stuck on the same page
-                if page > 1 and current_total < (page * 10):  # Assuming ~10 jobs per page
-                    print("⚠️ Job count seems low, might be stuck on same page")
-                    # Force navigation by updating URL
-                    current_url = self.driver.current_url
-                    if 'page=' in current_url:
-                        # Extract current page number and increment
-                        import re
-                        page_match = re.search(r'page=(\d+)', current_url)
-                        if page_match:
-                            current_page_num = int(page_match.group(1))
-                            next_page_url = current_url.replace(f'page={current_page_num}', f'page={current_page_num + 1}')
-                            print(f"🔄 Forcing navigation to: {next_page_url}")
-                            self.driver.get(next_page_url)
-                            time.sleep(5)
-                            continue
+
+    
+                # Try to go to next page (this will also detect if we're on the last page)
                 
                 # Try to go to next page
                 if not self.go_to_next_page():
@@ -134,11 +126,6 @@ class SimpleWuzzufScraper:
                 job_cards = self.driver.find_elements(By.CSS_SELECTOR, "div[class*='css-'], article, .job-card")
             
             if not job_cards:
-                print("⚠️ No job cards found on this page")
-                print("💡 This might mean the website structure changed or no jobs are available")
-                
-                # Debug: Show what elements are available
-                self.debug_page_structure()
                 return 0
             
             print(f"Found {len(job_cards)} job cards")
@@ -301,73 +288,99 @@ class SimpleWuzzufScraper:
         except Exception as e:
             return []
 
-    def debug_page_structure(self):
-        """Debug method to help troubleshoot selector issues"""
-        try:
-            print("\n🔍 Debug: Analyzing page structure...")
-            
-            # Check for job-related content
-            page_text = self.driver.page_source.lower()
-            if 'job' in page_text or 'position' in page_text or 'career' in page_text:
-                print("✅ Page contains job-related text")
-            else:
-                print("⚠️ Page doesn't seem to contain job-related text")
-            
-            # Check for key elements we're targeting
-            print("\n🔍 Key elements found:")
-            
-            # Job type elements
-            job_type_elements = self.driver.find_elements(By.CSS_SELECTOR, "span[class*='eoyjyou0'], div[class*='css-5jhz9n']")
-            print(f"  Job type elements: {len(job_type_elements)}")
-            
-            # Experience elements (our primary strategy)
-            span_no_class = self.driver.find_elements(By.CSS_SELECTOR, "span:not([class])")
-            print(f"  Span elements without classes: {len(span_no_class)}")
-            
-            # Skill elements
-            skill_elements = self.driver.find_elements(By.CSS_SELECTOR, "a[class*='css-o171kl'], a[class*='css-5x9pm1']")
-            print(f"  Skill elements: {len(skill_elements)}")
-            
-            # Pagination elements
-            next_button = self.driver.find_elements(By.CSS_SELECTOR, "button[class*='css-wq4g8g'], a[class*='css-1fcv3il']")
-            print(f"  Next page buttons: {len(next_button)}")
-                
-        except Exception as e:
-            print(f"❌ Debug error: {e}")
+
     
     def go_to_next_page(self):
-        """Navigate to next page using JavaScript click strategy"""
+        """Navigate to next page by finding the button with the right arrow SVG path"""
         try:
-            next_button = self.driver.find_element(By.CSS_SELECTOR, 
-                    "button[class*='css-wq4g8g'][class*='ezfki8j0']")
+            # Find the button containing the specific right arrow SVG path
+            next_button = None
+            
+            # Look for buttons with the exact SVG path for right arrow
+            target_path = "M9.213 5L7.5 6.645 13.063 12 7.5 17.355 9.213 19l7.287-7z"
+            
+            # Find all buttons that might contain SVG elements
+            all_buttons = self.driver.find_elements(By.CSS_SELECTOR, "button")
+            
+            for button in all_buttons:
+                try:
+                    # Look for SVG elements within the button
+                    svg_elements = button.find_elements(By.CSS_SELECTOR, "svg")
+                    for svg in svg_elements:
+                        # Look for path elements within the SVG
+                        path_elements = svg.find_elements(By.CSS_SELECTOR, "path")
+                        for path in path_elements:
+                            path_d = path.get_attribute('d')
+                            if path_d == target_path:
+                                next_button = button
+                                break
+                        if next_button:
+                            break
+                    if next_button:
+                        break
+                except:
+                    continue
             
             if next_button and next_button.is_enabled() and next_button.is_displayed():
-                self.driver.execute_script("arguments[0].click();", next_button)
-                time.sleep(5)  # Wait for page load
-                return True
+                print("✅ Found next page button with right arrow SVG")
+                try:
+                    self.driver.execute_script("arguments[0].click();", next_button)
+                    time.sleep(5)  # Wait for page load
+                    return True
+                except Exception as e:
+                    print(f"⚠️ Button click failed: {e}")
+                    return False
             else:
+                # If we can't find the next button, we're likely on the last page
+                print("🏁 Last page reached - no next button found")
                 return False
-                
+                 
         except Exception as e:
+            print(f"❌ Error navigating to next page: {e}")
             return False
-    
+        
     def save_data(self, filename_prefix="wuzzuf_jobs"):
-        """Save data to CSV and JSON"""
+        """Save data to organized folders within Data directory"""
         if not self.jobs_data:
             print("⚠️ No data to save!")
             return
         
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
-        # Save to CSV
-        csv_filename = f"{filename_prefix}_{timestamp}.csv"
-        self.save_to_csv(csv_filename)
-        
-        # Save to JSON
-        json_filename = f"{filename_prefix}_{timestamp}.json"
-        self.save_to_json(json_filename)
-        
-        print(f"💾 Data saved: {len(self.jobs_data)} jobs")
+        try:
+            # Create Data directory if it doesn't exist
+            data_dir = Path("Data")
+            data_dir.mkdir(exist_ok=True)
+            
+            # Create session folder with timestamp and keyword
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+            safe_keyword = filename_prefix.replace(' ', '_').replace('/', '_').replace('\\', '_')
+            session_folder = data_dir / f"scraping_session_{timestamp}_{safe_keyword}"
+            session_folder.mkdir(exist_ok=True)
+            
+            # Save to CSV in session folder
+            csv_filename = f"wuzzuf_jobs_{safe_keyword}_{timestamp}.csv"
+            csv_path = session_folder / csv_filename
+            self.save_to_csv(str(csv_path))
+            
+            # Save to JSON in session folder
+            json_filename = f"wuzzuf_jobs_{safe_keyword}_{timestamp}.json"
+            json_path = session_folder / json_filename
+            self.save_to_json(str(json_path))
+            
+            # Create summary file in session folder
+            summary_filename = f"scraping_summary_{safe_keyword}_{timestamp}.txt"
+            summary_path = session_folder / summary_filename
+            self.create_summary_file(str(summary_path), safe_keyword, timestamp)
+            
+            print(f"💾 Data saved to session folder: {session_folder}")
+            
+            return str(session_folder)
+            
+        except Exception as e:
+            print(f"❌ Error creating organized folders: {e}")
+            # Fallback to current directory
+            print("🔄 Falling back to current directory...")
+            self.save_data_fallback(filename_prefix)
+            return "."
     
     def save_to_csv(self, filename):
         """Save to CSV file"""
@@ -389,6 +402,98 @@ class SimpleWuzzufScraper:
             print(f"✅ JSON saved: {filename}")
         except Exception as e:
             print(f"❌ Error saving JSON: {e}")
+    
+    def save_data_fallback(self, filename_prefix="wuzzuf_jobs"):
+        """Fallback method to save data in current directory"""
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
+        # Save to CSV
+        csv_filename = f"{filename_prefix}_{timestamp}.csv"
+        self.save_to_csv(csv_filename)
+        
+        # Save to JSON
+        json_filename = f"{filename_prefix}_{timestamp}.json"
+        self.save_to_json(json_filename)
+        
+        print(f"💾 Data saved to current directory: {len(self.jobs_data)} jobs")
+    
+    def create_summary_file(self, summary_path, keyword, timestamp):
+        """Create a comprehensive summary file for the scraping session"""
+        try:
+            # Create summary content
+            summary_content = f"""Wuzzuf Job Scraping Summary
+========================================
+
+Session Information:
+- Date: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+- Keyword: {keyword}
+- Total Jobs Found: {len(self.jobs_data)}
+- Session Folder: {Path(summary_path).parent}
+
+Files Created:
+- CSV Data: wuzzuf_jobs_{keyword}_{timestamp}.csv
+- JSON Data: wuzzuf_jobs_{keyword}_{timestamp}.json
+- Summary: scraping_summary_{keyword}_{timestamp}.txt
+
+Data Overview:
+- Companies: {len(set(job.get('company', '') for job in self.jobs_data if job.get('company') and job.get('company') != 'Not specified'))}
+- Locations: {len(set(job.get('location', '') for job in self.jobs_data if job.get('location') and job.get('location') != 'Not specified'))}
+- Experience Levels: {len(set(job.get('experience_level', '') for job in self.jobs_data if job.get('experience_level') and job.get('experience_level') != 'Not specified'))}
+
+Top Companies (by job count):
+"""
+            
+            # Count company occurrences
+            company_counts = {}
+            for job in self.jobs_data:
+                company = job.get('company', 'Unknown')
+                if company and company != 'Not specified':
+                    company_counts[company] = company_counts.get(company, 0) + 1
+            
+            # Add top companies to summary
+            if company_counts:
+                sorted_companies = sorted(company_counts.items(), key=lambda x: x[1], reverse=True)
+                for i, (company, count) in enumerate(sorted_companies[:10], 1):
+                    summary_content += f"{i:2d}. {company}: {count} jobs\n"
+            else:
+                summary_content += "No company data available\n"
+            
+            summary_content += f"""
+
+Top Locations (by job count):
+"""
+            
+            # Count location occurrences
+            location_counts = {}
+            for job in self.jobs_data:
+                location = job.get('location', 'Unknown')
+                if location and location != 'Not specified':
+                    location_counts[location] = location_counts.get(location, 0) + 1
+            
+            # Add top locations to summary
+            if location_counts:
+                sorted_locations = sorted(location_counts.items(), key=lambda x: x[1], reverse=True)
+                for i, (location, count) in enumerate(sorted_locations[:10], 1):
+                    summary_content += f"{i:2d}. {location}: {count} jobs\n"
+            else:
+                summary_content += "No location data available\n"
+            
+            summary_content += f"""
+
+Generated by Wuzzuf Job Scraper Pro
+Session completed at: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}
+"""
+            
+            # Write summary file
+            with open(summary_path, 'w', encoding='utf-8') as f:
+                f.write(summary_content)
+            
+            print(f"📄 Created summary: {Path(summary_path).name}")
+            
+        except Exception as e:
+            print(f"❌ Error creating summary file: {e}")
+    
+
 
 def main():
     """Main function"""
@@ -409,10 +514,13 @@ def main():
             max_pages=MAX_PAGES
         )
         
-        # Save the data
-        scraper.save_data(OUTPUT_PREFIX)
+        # Save the data to organized folders
+        session_folder = scraper.save_data(OUTPUT_PREFIX)
         
         print("✅ Scraping completed successfully!")
+        print(f"📁 Data saved to: {session_folder}")
+        
+
         
     except ImportError:
         print("⚠️ Configuration file not found. Using default settings...")
@@ -423,13 +531,14 @@ def main():
             location="",
             max_pages=3
         )
-        scraper.save_data()
+        session_folder = scraper.save_data()
         print("✅ Scraping completed successfully!")
+        print(f"📁 Data saved to: {session_folder}")
         
     except Exception as e:
         print(f"❌ Error: {e}")
     finally:
-        print("🔚 Scraper finished")
+        print("\n🔚 Scraper finished")
 
 if __name__ == "__main__":
     main()
