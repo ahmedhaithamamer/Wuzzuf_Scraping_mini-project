@@ -22,7 +22,9 @@
 ## 🎥 **Video Demonstrations**
 
 ### 🚀 **Quick Start Guide**
-[![Quick Start Video](images/video_thumbnail_quickstart.png)](videos/quick_start_demo.mp4)
+[![Quick Start Video](https://github.com/user-attachments/assets/ddea1e29-a374-4f75-9592-24d3813469f9)
+
+
 *Watch how to get started in under 2 minutes*
 
 ### 🔍 **Complete Scraping Workflow**
