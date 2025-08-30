@@ -169,18 +169,6 @@ Wuzzuf_Scraping_mini-project/
 ├── ⚙️ simple_config.py           # Configuration file
 ├── 📋 requirements.txt           # Python dependencies
 ├── 📖 README.md                  # This documentation
-├── 📸 images/                    # Screenshots and thumbnails
-│   ├── main_interface.png
-│   ├── scraping_progress.png
-│   ├── data_viewer.png
-│   ├── console_interface.png
-│   ├── video_thumbnail_quickstart.png
-│   ├── video_thumbnail_workflow.png
-│   └── video_thumbnail_analysis.png
-├── 🎥 videos/                    # Video demonstrations
-│   ├── quick_start_demo.mp4
-│   ├── complete_workflow_demo.mp4
-│   └── data_analysis_demo.mp4
 ├── 📊 Data/                      # Scraped job data
 │   └── scraping_sessions/        # Organized by date
 └── 🎨 Custom_themes/             # GUI theme files
