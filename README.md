@@ -24,17 +24,6 @@
 ### 🚀 **Quick Start Guide**
 [![Quick Start Video](https://github.com/user-attachments/assets/ddea1e29-a374-4f75-9592-24d3813469f9)
 
-
-*Watch how to get started in under 2 minutes*
-
-### 🔍 **Complete Scraping Workflow**
-[![Scraping Workflow Video](images/video_thumbnail_workflow.png)](videos/complete_workflow_demo.mp4)
-*See the full process from search to data export*
-
-### 📊 **Data Analysis Features**
-[![Data Analysis Video](images/video_thumbnail_analysis.png)](videos/data_analysis_demo.mp4)
-*Learn how to filter, search, and export your collected data*
-
 ## 🎯 What This Tool Does
 
 This application helps you:
