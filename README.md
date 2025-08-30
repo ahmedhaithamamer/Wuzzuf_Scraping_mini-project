@@ -5,15 +5,13 @@
 ## 📸 **Screenshots & Demo**
 
 ### 🖥️ **Main Interface**
-![Main GUI Interface](images/main_interface.png)
+![Main GUI Interface] <img width="1195" height="846" alt="Screenshot 2025-08-30 204458" src="https://github.com/user-attachments/assets/19ae0f27-093b-4564-a45d-5ec570b27490" />
+
 *The beautiful dark-themed main interface with tabs for scraping and data viewing*
 
-### 🔍 **Scraping in Action**
-![Scraping Progress](images/scraping_progress.png)
-*Real-time progress tracking during job scraping*
-
 ### 📊 **Data Viewer**
-![Data Table](images/data_viewer.png)
+![Data Table] <img width="1198" height="844" alt="Screenshot 2025-08-30 204649" src="https://github.com/user-attachments/assets/1477dc29-8694-45ff-89eb-1d43726c501b" />
+
 *Clean table display of collected job data with search and filter options*
 
 ### 💻 **Console Interface**
