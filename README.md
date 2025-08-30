@@ -5,34 +5,24 @@
 ## 📸 **Screenshots & Demo**
 
 ### 🖥️ **Main Interface**
-![Main GUI Interface](images/main_interface.png)
+<img width="1195" height="846" alt="Screenshot 2025-08-30 204458" src="https://github.com/user-attachments/assets/19ae0f27-093b-4564-a45d-5ec570b27490" />
+
 *The beautiful dark-themed main interface with tabs for scraping and data viewing*
 
-### 🔍 **Scraping in Action**
-![Scraping Progress](images/scraping_progress.png)
-*Real-time progress tracking during job scraping*
-
 ### 📊 **Data Viewer**
-![Data Table](images/data_viewer.png)
+<img width="1198" height="844" alt="Screenshot 2025-08-30 204649" src="https://github.com/user-attachments/assets/1477dc29-8694-45ff-89eb-1d43726c501b" />
+
 *Clean table display of collected job data with search and filter options*
 
 ### 💻 **Console Interface**
-![Console Menu](images/console_interface.png)
+<img width="497" height="243" alt="Screenshot 2025-08-30 205121" src="https://github.com/user-attachments/assets/1d58dbee-4dbc-478c-98c6-324e4f685f0c" />
+
 *Simple text-based menu for console users*
 
 ## 🎥 **Video Demonstrations**
 
 ### 🚀 **Quick Start Guide**
-[![Quick Start Video](images/video_thumbnail_quickstart.png)](videos/quick_start_demo.mp4)
-*Watch how to get started in under 2 minutes*
-
-### 🔍 **Complete Scraping Workflow**
-[![Scraping Workflow Video](images/video_thumbnail_workflow.png)](videos/complete_workflow_demo.mp4)
-*See the full process from search to data export*
-
-### 📊 **Data Analysis Features**
-[![Data Analysis Video](images/video_thumbnail_analysis.png)](videos/data_analysis_demo.mp4)
-*Learn how to filter, search, and export your collected data*
+[Quick Start Video](https://github.com/user-attachments/assets/ddea1e29-a374-4f75-9592-24d3813469f9)
 
 ## 🎯 What This Tool Does
 
@@ -170,18 +160,6 @@ Wuzzuf_Scraping_mini-project/
 ├── ⚙️ simple_config.py           # Configuration file
 ├── 📋 requirements.txt           # Python dependencies
 ├── 📖 README.md                  # This documentation
-├── 📸 images/                    # Screenshots and thumbnails
-│   ├── main_interface.png
-│   ├── scraping_progress.png
-│   ├── data_viewer.png
-│   ├── console_interface.png
-│   ├── video_thumbnail_quickstart.png
-│   ├── video_thumbnail_workflow.png
-│   └── video_thumbnail_analysis.png
-├── 🎥 videos/                    # Video demonstrations
-│   ├── quick_start_demo.mp4
-│   ├── complete_workflow_demo.mp4
-│   └── data_analysis_demo.mp4
 ├── 📊 Data/                      # Scraped job data
 │   └── scraping_sessions/        # Organized by date
 └── 🎨 Custom_themes/             # GUI theme files
@@ -217,3 +195,5 @@ This tool makes it super easy to collect job market data from Wuzzuf.net. Whethe
 ---
 
 *Built with Python, Selenium, and CustomTkinter for a smooth, professional experience.*
+
+*Copyright © 2025 Ahmed Haitham Amer*
