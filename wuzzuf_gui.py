@@ -1,267 +1,218 @@
+# Core GUI framework
 import customtkinter as ctk
-from tkinter import filedialog, messagebox, scrolledtext
+from tkinter import filedialog, messagebox
+
+# Data processing
 import pandas as pd
 import os
 from pathlib import Path
+
+# Threading and timing
 import threading
 import queue
 from datetime import datetime
+
+# File handling
 import json
 import csv
-import time
+
+# Standard GUI components
 import tkinter as tk
 from tkinter import ttk
-
-# Optional imports for enhanced features
-try:
-    from PIL import Image, ImageTk
-    PIL_AVAILABLE = True
-except ImportError:
-    PIL_AVAILABLE = False
-    print("PIL not available - some image features may be limited")
-
-try:
-    import matplotlib.pyplot as plt
-    from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-    MATPLOTLIB_AVAILABLE = True
-except ImportError:
-    MATPLOTLIB_AVAILABLE = False
-    print("Matplotlib not available - chart features will be disabled")
-
-try:
-    import seaborn as sns
-    SEABORN_AVAILABLE = True
-except ImportError:
-    SEABORN_AVAILABLE = False
-    print("Seaborn not available - using matplotlib styling only")
 
 # Import the scraper
 from simple_wuzzuf_scraper import SimpleWuzzufScraper
 
 # Set appearance mode and color theme
 ctk.set_appearance_mode("dark")  # Modes: "System" (standard), "Dark", "Light"
-ctk.set_default_color_theme("blue")  # Themes: "blue" (standard), "green", "dark-blue"
+ctk.set_default_color_theme("Custom_themes/Custom_dark_theme.json")  # Themes: "blue" (standard), "green", "dark-blue"
 
 class WuzzufScraperGUI:
     def __init__(self):
         self.root = ctk.CTk()
-        self.root.title("🚀 Wuzzuf Job Scraper Pro - Advanced Edition")
-        self.root.geometry("1700x1100")
-        self.root.minsize(1400, 900)
+        self.root.title("🚀 Wuzzuf Job Scraper")
+        self.root.geometry("1200x800")
+        self.root.minsize(1000, 850)
         
-        # Set window icon and style
-        self.root.after(0, lambda: self.root.iconbitmap(""))  # Remove default icon
+        # Remove default window icon for cleaner appearance
+        self.root.after(0, lambda: self.root.iconbitmap(""))
         
-        # Enhanced color scheme with better contrast
+        # Application Color Scheme - Modern Dark Theme
         self.colors = {
-            'primary': "#0d7377",        # Teal primary
-            'secondary': "#14a085",      # Lighter teal
-            'success': "#2dd4bf",        # Bright teal success
-            'warning': "#f59e0b",        # Amber warning
-            'danger': "#ef4444",         # Red danger
-            'info': "#3b82f6",           # Blue info
-            'dark': "#1f2937",           # Dark gray
-            'light': "#f9fafb",          # Light gray
-            'accent': "#8b5cf6",         # Purple accent
-            'text_primary': "#ffffff",   # White text
-            'text_secondary': "#d1d5db", # Light gray text
-            'text_muted': "#9ca3af",     # Muted gray text
-            'bg_primary': "#111827",     # Dark background
-            'bg_secondary': "#374151",   # Secondary background
-            'bg_tertiary': "#4b5563"     # Tertiary background
+            'primary': "#3c3c3c",        # Main accent color for borders and highlights
+            'secondary': "#3c3c3c",      # Secondary accent for tabs and hover states
+            'success': "#22C55E",        # Success color for start button and positive actions
+            'warning': "#FACC15",        # Warning color for alerts and notifications
+            'danger': "#EF4444",         # Danger color for stop button and errors
+            'text_primary': "#F3F4F6",   # Primary text color for headers and main content
+            'text_secondary': "#9CA3AF", # Secondary text color for labels and hints
+            'bg_primary': "#0F172A",     # Main background color
+            'bg_secondary': "#282828",   # Secondary background for panels and cards
+            'white': "#ffffff",          # Pure white for contrast elements
+            'wuzzuf_primary': "#0055d9", # Wuzzuf brand color for special highlights
         }
+
+        # Initialize application state variables
+        self.scraper = None              # Active scraper instance
+        self.scraping_thread = None      # Background scraping thread
+        self.scraping_queue = queue.Queue()  # Communication queue for scraping updates
         
-        # Animation variables
-        self.animation_running = False
-        self.notification_queue = queue.Queue()
+        # Data storage variables
+        self.df = None                   # Original dataset
+        self.filtered_df = None          # Filtered dataset for display
         
-        # Scraper instance
-        self.scraper = None
-        self.scraping_thread = None
-        self.scraping_queue = queue.Queue()
-        
-        # Data storage
-        self.df = None
-        self.filtered_df = None
-        self.scraping_stats = {
-            'total_jobs': 0,
-            'pages_scraped': 0,
-            'start_time': None,
-            'end_time': None
-        }
-        
-        # Create GUI components
+        # Build the user interface
         self.create_widgets()
         
-        # Initialize animations and effects
-        self.setup_animations()
-        
-        # Try to load default CSV if it exists
+        # Auto-load default data if available
         self.load_default_csv()
         
-        # Start monitoring queues
+        # Start background task monitoring
         self.monitor_scraping_queue()
-        self.monitor_notifications()
     
     def create_widgets(self):
-        # Create main scrollable frame
-        self.main_scrollable_frame = ctk.CTkScrollableFrame(
-            self.root, 
-            fg_color="transparent",
-            scrollbar_button_color=self.colors['secondary'],
-            scrollbar_button_hover_color=self.colors['primary']
+        """Build the main application interface"""
+        
+        # Main application frame (no scrolling for main interface)
+        self.main_frame = ctk.CTkFrame(
+            self.root,
+            fg_color="transparent"
         )
-        self.main_scrollable_frame.pack(fill="both", expand=True, padx=20, pady=20)
+        self.main_frame.pack(fill="both", expand=True, padx=20, pady=20)
+
+        # Main container for all content
+        main_container = self.main_frame
         
-        # Main container inside scrollable frame
-        main_container = self.main_scrollable_frame
-        
-        # Enhanced header section with better contrast
+        # Application Header Section
         header_frame = ctk.CTkFrame(
             main_container, 
-            height=140, 
+            height=120, 
             corner_radius=15,
             fg_color=self.colors['bg_secondary'],
             border_width=2,
             border_color=self.colors['primary']
         )
-        header_frame.pack(fill="x", pady=(0, 20))
-        header_frame.pack_propagate(False)
+        header_frame.pack(fill="x", pady=(0, 10))
+        header_frame.pack_propagate(False)  # Maintain fixed height
         
-        # Header content frame
+        # Header content container
         header_content = ctk.CTkFrame(header_frame, fg_color="transparent")
         header_content.pack(fill="both", expand=True, padx=25, pady=20)
         
-        # Left side - Title and subtitle
+        # Application title and subtitle
         title_frame = ctk.CTkFrame(header_content, fg_color="transparent")
         title_frame.pack(side="left", fill="both", expand=True)
         
+        # Main application title
         self.title_label = ctk.CTkLabel(
             title_frame, 
             text="🚀 Wuzzuf Job Scraper Pro", 
-            font=ctk.CTkFont(size=38, weight="bold"),
-            text_color=self.colors['success']
+            font=ctk.CTkFont(size=35, weight="bold"),
+            text_color=self.colors['wuzzuf_primary']
         )
-        self.title_label.pack(anchor="w")
+        self.title_label.pack(anchor="center")
         
+        # Application subtitle
         subtitle_label = ctk.CTkLabel(
             title_frame,
-            text="Advanced job scraping and data analysis platform",
-            font=ctk.CTkFont(size=18),
+            text="Simple and efficient job scraping tool",
+            font=ctk.CTkFont(size=14),
             text_color=self.colors['text_secondary']
         )
-        subtitle_label.pack(anchor="w", pady=(8, 0))
-        
-        # Right side - Quick stats with enhanced styling
-        self.stats_frame = ctk.CTkFrame(
-            header_content, 
-            width=320, 
-            corner_radius=12,
-            fg_color=self.colors['bg_tertiary'],
-            border_width=1,
-            border_color=self.colors['secondary']
-        )
-        self.stats_frame.pack(side="right", fill="y", padx=(25, 0))
-        self.stats_frame.pack_propagate(False)
-        
-        stats_title = ctk.CTkLabel(
-            self.stats_frame,
-            text="📊 Quick Stats",
-            font=ctk.CTkFont(size=18, weight="bold"),
-            text_color=self.colors['text_primary']
-        )
-        stats_title.pack(pady=(15, 8))
-        
-        self.quick_stats_text = ctk.CTkLabel(
-            self.stats_frame,
-            text="Ready to start scraping\nNo data loaded yet",
-            font=ctk.CTkFont(size=14),
-            text_color=self.colors['text_secondary'],
-            justify="center"
-        )
-        self.quick_stats_text.pack(pady=(0, 15))
-        
-        # Create enhanced tabview with better styling
+        subtitle_label.pack(anchor="center", pady=(8, 0))        # Main Tab Interface
         self.tabview = ctk.CTkTabview(
             main_container, 
             corner_radius=15, 
             height=900,
             fg_color=self.colors['bg_secondary'],
-            segmented_button_fg_color=self.colors['bg_tertiary'],
+            segmented_button_fg_color=self.colors['bg_secondary'],
             segmented_button_selected_color=self.colors['primary'],
             segmented_button_selected_hover_color=self.colors['secondary'],
-            text_color=self.colors['text_primary'],
-            text_color_disabled=self.colors['text_muted']
+            text_color=self.colors['text_primary']
         )
         self.tabview.pack(fill="both", expand=True, pady=(10, 0))
         
-        # Create tabs with better organization
-        self.create_scraping_tab()
-        self.create_data_viewer_tab()
-        self.create_analytics_tab()
-        self.create_settings_tab()
+        # Create application tabs
+        self.create_scraping_tab()      # Job scraping configuration and control
+        self.create_data_viewer_tab()   # Data viewing and analysis
         
-        # Enhanced status bar with notifications
-        self.create_enhanced_status_bar(main_container)
-    
     def create_scraping_tab(self):
-        """Create the scraping configuration and control tab"""
+        """Create the job scraping configuration and control interface"""
         scraping_frame = self.tabview.add("🔍 Scraping")
         
-        # Scraping configuration section
-        config_section = self.create_section_frame(scraping_frame, "⚙️ Scraping Configuration")
+        # Main scraping interface section
+        combined_section = self.create_section_frame(scraping_frame, "⚙️ Scraping Configuration & Control")
         
-        # Search settings with enhanced styling
-        search_frame = ctk.CTkFrame(
-            config_section,
-            fg_color=self.colors['bg_tertiary'],
+        # Container for side-by-side layout (configuration + log)
+        main_container_frame = ctk.CTkFrame(combined_section)
+        main_container_frame.pack(fill="x", padx=15, pady=15)
+        
+        # Layout configuration: 60% for settings, 40% for log
+        main_container_frame.grid_columnconfigure(0, weight=6)  # Configuration panel
+        main_container_frame.grid_columnconfigure(1, weight=4)  # Log panel
+        
+        # Left Panel: Search Configuration (60% width)
+        config_control_frame = ctk.CTkFrame(
+            main_container_frame,
+            fg_color=self.colors['bg_secondary'],
             corner_radius=12,
             border_width=1,
             border_color=self.colors['secondary']
         )
-        search_frame.pack(fill="x", padx=15, pady=15)
+        config_control_frame.grid(row=0, column=0, sticky="nsew", padx=(0, 15), pady=0, ipadx=15, ipady=15)
         
-        # Keyword input
+        # Search Configuration Section Header
+        config_title = ctk.CTkLabel(
+            config_control_frame,
+            text="🔍 Search Settings",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color=self.colors['white']
+        )
+        config_title.pack(anchor="w", padx=20, pady=(15, 12))
+        
+        # Search Keyword Input Field
         keyword_label = ctk.CTkLabel(
-            search_frame,
+            config_control_frame,
             text="Search Keyword:",
             font=ctk.CTkFont(size=14, weight="bold")
         )
-        keyword_label.pack(anchor="w", padx=(15, 10), pady=(15, 5))
+        keyword_label.pack(anchor="w", padx=(20, 10), pady=(8, 5))
         
+        # Default keyword for software engineering jobs
         self.keyword_var = ctk.StringVar(value="software engineering")
         keyword_entry = ctk.CTkEntry(
-            search_frame,
+            config_control_frame,
             textvariable=self.keyword_var,
             font=ctk.CTkFont(size=14),
-            height=40,
+            height=32,
             placeholder_text="Enter search keyword..."
         )
-        keyword_entry.pack(fill="x", padx=15, pady=(0, 15))
+        keyword_entry.pack(fill="x", padx=20, pady=(0, 8))
         
-        # Location input
+        # Location Input Field (Optional)
         location_label = ctk.CTkLabel(
-            search_frame,
+            config_control_frame,
             text="Location (optional):",
             font=ctk.CTkFont(size=14, weight="bold")
         )
-        location_label.pack(anchor="w", padx=(15, 10), pady=(15, 5))
+        location_label.pack(anchor="w", padx=(20, 10), pady=(8, 5))
         
+        # Location variable for filtering jobs by geographic area
         self.location_var = ctk.StringVar()
         location_entry = ctk.CTkEntry(
-            search_frame,
+            config_control_frame,
             textvariable=self.location_var,
             font=ctk.CTkFont(size=14),
-            height=40,
+            height=32,
             placeholder_text="Enter location (optional)..."
         )
-        location_entry.pack(fill="x", padx=15, pady=(0, 15))
+        location_entry.pack(fill="x", padx=20, pady=(0, 8))
         
-        # Advanced settings
-        advanced_frame = ctk.CTkFrame(search_frame)
-        advanced_frame.pack(fill="x", padx=15, pady=(0, 15))
+        # Advanced Settings Row
+        advanced_frame = ctk.CTkFrame(config_control_frame)
+        advanced_frame.pack(fill="x", padx=20, pady=(5, 12))
         
-        # Max pages
+        # Maximum Pages to Scrape
         pages_label = ctk.CTkLabel(
             advanced_frame,
             text="Max Pages:",
@@ -269,60 +220,58 @@ class WuzzufScraperGUI:
         )
         pages_label.pack(side="left", padx=(0, 10))
         
+        # Default: scrape 3 pages (prevents excessive requests)
         self.max_pages_var = ctk.IntVar(value=3)
         pages_spinbox = ctk.CTkEntry(
             advanced_frame,
             textvariable=self.max_pages_var,
             font=ctk.CTkFont(size=14),
-            width=100,
-            height=35
+            width=70,
+            height=28
         )
         pages_spinbox.pack(side="left", padx=(0, 20))
         
-        # Headless mode
-        self.headless_var = ctk.BooleanVar(value=False)
-        headless_check = ctk.CTkCheckBox(
-            advanced_frame,
-            text="Headless Mode",
-            variable=self.headless_var,
-            font=ctk.CTkFont(size=14),
-            checkbox_width=20,
-            checkbox_height=20
+
+        
+        # Scraping Control Section Header
+        control_title = ctk.CTkLabel(
+            config_control_frame,
+            text="🎮 Scraping Control",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color=self.colors['white']
         )
-        headless_check.pack(side="left")
+        control_title.pack(anchor="w", padx=20, pady=(12, 10))
         
-        # Scraping control section
-        control_section = self.create_section_frame(scraping_frame, "🎮 Scraping Control")
+        # Control Buttons Container
+        button_frame = ctk.CTkFrame(config_control_frame)
+        button_frame.pack(fill="x", padx=20, pady=(8, 12))
         
-        control_frame = ctk.CTkFrame(control_section)
-        control_frame.pack(fill="x", padx=15, pady=15)
-        
-        # Start button with enhanced styling
+        # Start Scraping Button
         self.start_btn = ctk.CTkButton(
-            control_frame,
+            button_frame,
             text="🚀 Start Scraping",
             command=self.start_scraping,
-            font=ctk.CTkFont(size=16, weight="bold"),
-            height=55,
-            width=180,
-            corner_radius=12,
+            font=ctk.CTkFont(size=15, weight="bold"),
+            height=42,
+            width=140,
+            corner_radius=10,
             fg_color=self.colors['success'],
             hover_color=self.colors['secondary'],
             border_width=2,
             border_color=self.colors['primary'],
             text_color=self.colors['text_primary']
         )
-        self.start_btn.pack(side="left", padx=(20, 15))
+        self.start_btn.pack(side="left", padx=(10, 8))
         
-        # Stop button with enhanced styling
+        # Stop Scraping Button (initially disabled)
         self.stop_btn = ctk.CTkButton(
-            control_frame,
+            button_frame,
             text="⏹️ Stop Scraping",
             command=self.stop_scraping,
-            font=ctk.CTkFont(size=16, weight="bold"),
-            height=55,
-            width=180,
-            corner_radius=12,
+            font=ctk.CTkFont(size=15, weight="bold"),
+            height=42,
+            width=140,
+            corner_radius=10,
             fg_color=self.colors['danger'],
             hover_color=("#dc2626", "#dc2626"),
             border_width=2,
@@ -330,40 +279,55 @@ class WuzzufScraperGUI:
             text_color=self.colors['text_primary'],
             state="disabled"
         )
-        self.stop_btn.pack(side="left", padx=(0, 20))
+        self.stop_btn.pack(side="left", padx=(8, 10))
         
-        # Progress section
-        progress_section = self.create_section_frame(scraping_frame, "📊 Scraping Progress")
+        # Progress Tracking Section
+        progress_frame = ctk.CTkFrame(config_control_frame)
+        progress_frame.pack(fill="x", padx=20, pady=(0, 12))
         
-        progress_frame = ctk.CTkFrame(progress_section)
-        progress_frame.pack(fill="x", padx=15, pady=15)
-        
-        # Progress bar
+        # Visual Progress Bar
         self.progress_var = ctk.DoubleVar()
         self.progress_bar = ctk.CTkProgressBar(
             progress_frame,
             variable=self.progress_var,
-            height=20
+            height=16,
+            progress_color=self.colors['wuzzuf_primary']
         )
-        self.progress_bar.pack(fill="x", padx=15, pady=(15, 10))
-        self.progress_bar.set(0)
+        self.progress_bar.pack(fill="x", padx=20, pady=(12, 6))
+        self.progress_bar.set(0)  # Initialize at 0%
         
-        # Progress label
+        # Progress Status Text
         self.progress_label = ctk.CTkLabel(
             progress_frame,
             text="Ready to start scraping",
-            font=ctk.CTkFont(size=14),
+            font=ctk.CTkFont(size=12),
             text_color=("gray50", "gray70")
         )
-        self.progress_label.pack(pady=(0, 15))
+        self.progress_label.pack(pady=(0, 8))
         
-        # Log section
-        log_section = self.create_section_frame(scraping_frame, "📝 Scraping Log")
+        # Right Panel: Scraping Log (40% width)
+        log_frame = ctk.CTkFrame(
+            main_container_frame,
+            fg_color=self.colors['bg_secondary'],
+            corner_radius=12,
+            border_width=1,
+            border_color=self.colors['secondary']
+        )
+        log_frame.grid(row=0, column=1, sticky="nsew", padx=(0, 0), pady=0, ipadx=10, ipady=10)
         
-        # Log text area
+        # Log Section Header
+        log_title = ctk.CTkLabel(
+            log_frame,
+            text="📝 Scraping Log",
+            font=ctk.CTkFont(size=16, weight="bold"),
+            text_color=self.colors['white']
+        )
+        log_title.pack(anchor="w", padx=15, pady=(15, 10))
+        
+        # Real-time Log Display
         self.log_text = ctk.CTkTextbox(
-            log_section,
-            height=300,
+            log_frame,
+            height=350,  # Optimized height for better proportions
             font=ctk.CTkFont(size=12, family="Consolas")
         )
         self.log_text.pack(fill="both", expand=True, padx=15, pady=15)
@@ -371,361 +335,246 @@ class WuzzufScraperGUI:
     def create_data_viewer_tab(self):
         """Create the data viewing and analysis tab"""
         viewer_frame = self.tabview.add("📊 Data Viewer")
-        
+
+        # Create scrollable frame for data viewer content
+        self.data_viewer_scrollable = ctk.CTkScrollableFrame(
+            viewer_frame,
+            fg_color="transparent",
+            scrollbar_button_color=self.colors['secondary'],
+            scrollbar_button_hover_color=self.colors['primary']
+        )
+        self.data_viewer_scrollable.pack(fill="both", expand=True, padx=5, pady=5)
+
+        # Use scrollable frame as the container for data viewer content
+        data_container = self.data_viewer_scrollable
+
         # File selection section
-        file_section = self.create_section_frame(viewer_frame, "📁 File Selection")
+        file_section = self.create_section_frame(data_container, "📁 File Selection")
         
         file_input_frame = ctk.CTkFrame(file_section)
-        file_input_frame.pack(fill="x", padx=15, pady=15)
+        file_input_frame.pack(fill="x", padx=15, pady=12)
         
         self.file_path_var = ctk.StringVar()
         self.file_entry = ctk.CTkEntry(
             file_input_frame,
             textvariable=self.file_path_var,
             font=ctk.CTkFont(size=14),
-            height=40,
+            height=36,
             placeholder_text="Select CSV file..."
         )
-        self.file_entry.pack(side="left", fill="x", expand=True, padx=(15, 10), pady=15)
+        self.file_entry.pack(side="left", fill="x", expand=True, padx=(15, 10), pady=12)
         
         browse_btn = ctk.CTkButton(
             file_input_frame,
             text="🔍 Browse",
             command=self.browse_file,
             font=ctk.CTkFont(size=14, weight="bold"),
-            height=40,
-            width=100
+            height=36,
+            width=90
         )
-        browse_btn.pack(side="right", padx=(0, 15), pady=15)
+        browse_btn.pack(side="right", padx=(0, 10), pady=12)
         
         load_btn = ctk.CTkButton(
             file_input_frame,
             text="📥 Load",
             command=self.load_csv,
             font=ctk.CTkFont(size=14, weight="bold"),
-            height=40,
-            width=100,
+            height=36,
+            width=90,
             fg_color=("#28a745", "#28a745"),
             hover_color=("#218838", "#218838")
         )
-        load_btn.pack(side="right", padx=(0, 10), pady=15)
+        load_btn.pack(side="right", padx=(0, 15), pady=12)
         
-        # Search and filter section
-        filter_section = self.create_section_frame(viewer_frame, "🔍 Search & Filter")
+        # Data Search and Filtering Interface
+        filter_section = self.create_section_frame(data_container, "🔍 Search & Filter")
         
+        # Filter controls container
         filter_controls = ctk.CTkFrame(filter_section)
-        filter_controls.pack(fill="x", padx=15, pady=15)
+        filter_controls.pack(fill="x", padx=15, pady=12)
         
-        # Search input
+        # Search term input field
         search_label = ctk.CTkLabel(
             filter_controls,
             text="Search:",
             font=ctk.CTkFont(size=14, weight="bold")
         )
-        search_label.pack(side="left", padx=(15, 10), pady=15)
+        search_label.pack(side="left", padx=(15, 10), pady=12)
         
+        # Real-time search input with auto-filtering
         self.search_var = ctk.StringVar()
         self.search_entry = ctk.CTkEntry(
             filter_controls,
             textvariable=self.search_var,
             font=ctk.CTkFont(size=14),
-            height=35,
-            width=200,
+            height=32,
+            width=180,
             placeholder_text="Enter search term..."
         )
-        self.search_entry.pack(side="left", padx=(0, 20), pady=15)
-        self.search_entry.bind('<KeyRelease>', self.filter_data)
+        self.search_entry.pack(side="left", padx=(0, 15), pady=12)
+        self.search_entry.bind('<KeyRelease>', self.filter_data)  # Auto-filter on typing
         
-        # Column selector
+        # Column-specific filtering dropdown
         column_label = ctk.CTkLabel(
             filter_controls,
             text="Column:",
             font=ctk.CTkFont(size=14, weight="bold")
         )
-        column_label.pack(side="left", padx=(0, 10), pady=15)
+        column_label.pack(side="left", padx=(0, 10), pady=12)
         
+        # Dropdown to select specific column for filtering
         self.column_var = ctk.StringVar()
         self.column_combo = ctk.CTkComboBox(
             filter_controls,
             variable=self.column_var,
             font=ctk.CTkFont(size=14),
-            width=150,
-            height=35,
+            width=130,
+            height=32,
             state="readonly"
         )
-        self.column_combo.pack(side="left", padx=(0, 20), pady=15)
+        self.column_combo.pack(side="left", padx=(0, 15), pady=12)
         
-        # Clear filters button
+        # Clear all active filters button
         clear_btn = ctk.CTkButton(
             filter_controls,
             text="🗑️ Clear",
             command=self.clear_filters,
             font=ctk.CTkFont(size=14, weight="bold"),
-            height=35,
-            width=100,
+            height=32,
+            width=80,
             fg_color=("#ffc107", "#ffc107"),
             hover_color=("#e0a800", "#e0a800"),
             text_color=("black", "black")
         )
-        clear_btn.pack(side="right", padx=(0, 15), pady=15)
+        clear_btn.pack(side="right", padx=(0, 15), pady=12)
         
-        # Statistics section
-        stats_section = self.create_section_frame(viewer_frame, "📈 Statistics")
+        # Data Statistics Display
+        stats_section = self.create_section_frame(data_container, "📈 Statistics")
         
+        # Statistics information display area
         self.stats_text = ctk.CTkTextbox(
             stats_section,
-            height=120,
+            height=100,
             font=ctk.CTkFont(size=12, family="Consolas")
         )
-        self.stats_text.pack(fill="x", padx=15, pady=15)
+        self.stats_text.pack(fill="x", padx=15, pady=12)
         
-        # Data table section
-        table_section = self.create_section_frame(viewer_frame, "📋 Data Table")
+        # Main Data Table Interface
+        table_section = self.create_section_frame(data_container, "📋 Data Table")
         
-        # Table container with scrollbars
+        # Table container with enhanced scrollbars
         table_container = ctk.CTkFrame(table_section)
-        table_container.pack(fill="both", expand=True, padx=15, pady=15)
+        table_container.pack(fill="both", expand=True, padx=15, pady=12)
         
-        # Create Treeview with custom style
+        # Import required GUI components
         import tkinter as tk
         from tkinter import ttk
         
-        # Create a frame for the treeview
+        # Create treeview container with grid layout for scrollbars
         tree_frame = tk.Frame(table_container)
         tree_frame.pack(fill="both", expand=True)
         
-        # Create Treeview
-        self.tree = ttk.Treeview(tree_frame)
-        self.tree.pack(side="left", fill="both", expand=True)
+        # Configure grid layout for proper scrollbar positioning
+        tree_frame.grid_columnconfigure(0, weight=1)  # Main table area
+        tree_frame.grid_rowconfigure(0, weight=1)    # Main table area
         
-        # Scrollbars
-        v_scrollbar = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
-        v_scrollbar.pack(side="right", fill="y")
+        # Create main data table (Treeview)
+        self.tree = ttk.Treeview(tree_frame, show="headings")
+        self.tree.grid(row=0, column=0, sticky="nsew")
+        
+        # Vertical Scrollbar for row navigation
+        v_scrollbar = ctk.CTkScrollbar(
+            tree_frame, 
+            orientation="vertical", 
+            command=self.tree.yview,
+            fg_color=self.colors['bg_secondary'],
+            button_color=self.colors['secondary'],
+            button_hover_color=self.colors['primary'],
+            width=12
+        )
+        v_scrollbar.grid(row=0, column=1, sticky="ns")
         self.tree.configure(yscrollcommand=v_scrollbar.set)
         
-        h_scrollbar = ttk.Scrollbar(tree_frame, orient="horizontal", command=self.tree.xview)
-        h_scrollbar.pack(side="bottom", fill="x")
+        # Horizontal Scrollbar for column navigation
+        h_scrollbar = ctk.CTkScrollbar(
+            tree_frame, 
+            orientation="horizontal", 
+            command=self.tree.xview,
+            fg_color=self.colors['bg_secondary'],
+            button_color=self.colors['secondary'],
+            button_hover_color=self.colors['primary'],
+            height=12
+        )
+        h_scrollbar.grid(row=1, column=0, sticky="ew")
         self.tree.configure(xscrollcommand=h_scrollbar.set)
         
+        # Apply custom styling to match application theme
+        style = ttk.Style()
+        style.theme_use("clam")  # Use clam theme for better customization
+        
+        # Main table styling (rows and cells)
+        style.configure(
+            "Treeview",
+            background=self.colors['bg_secondary'],
+            foreground=self.colors['text_primary'],
+            fieldbackground=self.colors['bg_secondary'],
+            borderwidth=0,
+            rowheight=25
+        )
+        
+        # Table header styling
+        style.configure(
+            "Treeview.Heading",
+            background=self.colors['primary'],
+            foreground=self.colors['text_primary'],
+            relief="flat",
+            borderwidth=0,
+            font=("Arial", 10, "bold")
+        )
+        
+        # Row selection highlighting
+        style.map(
+            "Treeview",
+            background=[("selected", self.colors['wuzzuf_primary'])],
+            foreground=[("selected", self.colors['white'])]
+        )
+        
+        # Mouse wheel scrolling support (cross-platform)
+        self.tree.bind("<MouseWheel>", self.on_mousewheel)      # Windows/Mac
+        self.tree.bind("<Button-4>", self.on_mousewheel)        # Linux scroll up
+        self.tree.bind("<Button-5>", self.on_mousewheel)        # Linux scroll down
+        
+        # Keyboard shortcuts for enhanced navigation
+        self.tree.bind("<Control-a>", self.select_all_rows)     # Select all rows
+        self.tree.bind("<Control-f>", lambda e: self.search_entry.focus())  # Focus search
+        
+
+        
         # Export section
-        export_section = self.create_section_frame(viewer_frame, "💾 Export Data")
+        export_section = self.create_section_frame(data_container, "💾 Export Data")
         
         export_buttons = ctk.CTkFrame(export_section)
-        export_buttons.pack(fill="x", padx=15, pady=15)
+        export_buttons.pack(fill="x", padx=15, pady=12)
         
         export_filtered_btn = ctk.CTkButton(
             export_buttons,
             text="📤 Export Filtered",
             command=self.export_data,
             font=ctk.CTkFont(size=14, weight="bold"),
-            height=40,
+            height=36,
             fg_color=("#28a745", "#28a745"),
             hover_color=("#218838", "#218838")
         )
-        export_filtered_btn.pack(side="left", padx=(0, 15))
+        export_filtered_btn.pack(side="left", padx=(0, 12))
         
         export_all_btn = ctk.CTkButton(
             export_buttons,
             text="📤 Export All",
             command=self.export_all_data,
             font=ctk.CTkFont(size=14, weight="bold"),
-            height=40
+            height=36
         )
-        export_all_btn.pack(side="left")
-    
-    def create_analytics_tab(self):
-        """Create the data analytics and visualization tab"""
-        analytics_frame = self.tabview.add("📈 Analytics")
-        
-        # Analytics controls section
-        controls_section = self.create_section_frame(analytics_frame, "🎛️ Analytics Controls")
-        
-        controls_frame = ctk.CTkFrame(controls_section)
-        controls_frame.pack(fill="x", padx=15, pady=15)
-        
-        # Chart type selector
-        chart_label = ctk.CTkLabel(
-            controls_frame,
-            text="Chart Type:",
-            font=ctk.CTkFont(size=14, weight="bold")
-        )
-        chart_label.pack(side="left", padx=(15, 10), pady=15)
-        
-        self.chart_type_var = ctk.StringVar(value="Job Count by Company")
-        chart_combo = ctk.CTkComboBox(
-            controls_frame,
-            variable=self.chart_type_var,
-            values=["Job Count by Company", "Experience Level Distribution", 
-                   "Skills Frequency", "Location Analysis", "Job Type Distribution"],
-            font=ctk.CTkFont(size=14),
-            width=200,
-            height=35,
-            state="readonly"
-        )
-        chart_combo.pack(side="left", padx=(0, 20), pady=15)
-        
-        # Generate chart button
-        self.generate_btn = ctk.CTkButton(
-            controls_frame,
-            text="📊 Generate Chart" if MATPLOTLIB_AVAILABLE else "📊 Install Matplotlib",
-            command=self.generate_chart if MATPLOTLIB_AVAILABLE else self.show_matplotlib_info,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            height=35,
-            fg_color=self.colors['info'] if MATPLOTLIB_AVAILABLE else self.colors['warning'],
-            hover_color=self.colors['secondary'] if MATPLOTLIB_AVAILABLE else self.colors['danger']
-        )
-        self.generate_btn.pack(side="left", padx=(0, 15), pady=15)
-        
-        # Export chart button
-        export_chart_btn = ctk.CTkButton(
-            controls_frame,
-            text="💾 Export Chart",
-            command=self.export_chart,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            height=35,
-            fg_color=self.colors['success'],
-            hover_color=("#218838", "#218838")
-        )
-        export_chart_btn.pack(side="right", padx=(0, 15), pady=15)
-        
-        # Chart display section
-        chart_section = self.create_section_frame(analytics_frame, "📊 Visualization")
-        
-        # Chart container
-        self.chart_container = ctk.CTkFrame(chart_section)
-        self.chart_container.pack(fill="both", expand=True, padx=15, pady=15)
-        
-        # Initial message
-        if MATPLOTLIB_AVAILABLE:
-            chart_text = ("📊 Load data and select a chart type to begin analysis\n\n"
-                         "Available visualizations:\n"
-                         "• Job distribution by companies\n"
-                         "• Experience level requirements\n"
-                         "• Most demanded skills\n"
-                         "• Geographic job distribution\n"
-                         "• Employment type breakdown")
-        else:
-            chart_text = ("📊 Data Visualization Available\n\n"
-                         "To enable chart generation, install matplotlib:\n"
-                         "pip install matplotlib seaborn pillow\n\n"
-                         "This will unlock:\n"
-                         "• Interactive charts and graphs\n"
-                         "• Data visualization tools\n"
-                         "• Chart export functionality\n"
-                         "• Enhanced analytics features")
-        
-        self.chart_message = ctk.CTkLabel(
-            self.chart_container,
-            text=chart_text,
-            font=ctk.CTkFont(size=16),
-            text_color=("gray60", "gray80"),
-            justify="center"
-        )
-        self.chart_message.pack(expand=True, pady=50)
-        
-        # Insights section
-        insights_section = self.create_section_frame(analytics_frame, "🔍 Data Insights")
-        
-        self.insights_text = ctk.CTkTextbox(
-            insights_section,
-            height=150,
-            font=ctk.CTkFont(size=14),
-            wrap="word"
-        )
-        self.insights_text.pack(fill="x", padx=15, pady=15)
-        
-        # Initial insights text
-        initial_insights = """
-🔍 Data Insights will appear here after loading data:
 
-• Market trends and patterns
-• Skill demand analysis  
-• Salary range insights
-• Company hiring patterns
-• Location-based opportunities
-
-Load your scraped data to see detailed analytics and insights!
-        """
-        self.insights_text.insert("1.0", initial_insights.strip())
-        self.insights_text.configure(state="disabled")
-    
-    def create_settings_tab(self):
-        """Create the settings and configuration tab"""
-        settings_frame = self.tabview.add("⚙️ Settings")
-        
-        # Configuration section
-        config_section = self.create_section_frame(settings_frame, "🔧 Configuration")
-        
-        config_frame = ctk.CTkFrame(config_section)
-        config_frame.pack(fill="x", padx=15, pady=15)
-        
-        # Engineering fields
-        fields_label = ctk.CTkLabel(
-            config_frame,
-            text="Engineering Fields (one per line):",
-            font=ctk.CTkFont(size=14, weight="bold")
-        )
-        fields_label.pack(anchor="w", padx=(15, 10), pady=(15, 5))
-        
-        self.fields_text = ctk.CTkTextbox(
-            config_frame,
-            height=200,
-            font=ctk.CTkFont(size=14)
-        )
-        self.fields_text.pack(fill="x", padx=15, pady=(0, 15))
-        
-        # Load default fields
-        default_fields = [
-            "software engineering",
-            "mechanical engineering",
-            "civil engineering",
-            "electrical engineering",
-            "data engineering",
-            "AI engineering",
-            "robotics engineering"
-        ]
-        self.fields_text.insert("1.0", '\n'.join(default_fields))
-        
-        # Save config button
-        save_config_btn = ctk.CTkButton(
-            config_frame,
-            text="💾 Save Configuration",
-            command=self.save_configuration,
-            font=ctk.CTkFont(size=14, weight="bold"),
-            height=40,
-            fg_color=("#28a745", "#28a745"),
-            hover_color=("#218838", "#218838")
-        )
-        save_config_btn.pack(anchor="w", padx=15, pady=(0, 15))
-        
-        # About section
-        about_section = self.create_section_frame(settings_frame, "ℹ️ About")
-        
-        about_text = ctk.CTkTextbox(
-            about_section,
-            height=250,
-            font=ctk.CTkFont(size=14),
-            wrap="word"
-        )
-        about_text.pack(fill="x", padx=15, pady=15)
-        
-        about_content = """
-Wuzzuf Job Scraper Pro v2.0
-
-A professional tool for scraping job listings from Wuzzuf.net
-
-Features:
-• Automated job scraping with configurable parameters
-• Real-time progress monitoring and logging
-• Advanced data filtering and search capabilities
-• Export functionality (CSV/JSON)
-• Modern, intuitive user interface
-• Multi-threaded scraping for better performance
-
-Built with Python, Selenium, and CustomTkinter
-        """
-        about_text.insert("1.0", about_content.strip())
-        about_text.configure(state="disabled")
     
     def create_section_frame(self, parent, title):
         """Create a styled section frame with title and better contrast"""
@@ -737,7 +586,7 @@ Built with Python, Selenium, and CustomTkinter
             section,
             text=title,
             font=ctk.CTkFont(size=20, weight="bold"),
-            text_color=self.colors['success']
+            text_color=self.colors['wuzzuf_primary']
         )
         title_label.pack(anchor="w", pady=(0, 12))
         
@@ -751,180 +600,6 @@ Built with Python, Selenium, and CustomTkinter
         
         return section
     
-    def create_status_bar(self, parent):
-        """Create the status bar"""
-        status_frame = ctk.CTkFrame(parent, height=40)
-        status_frame.pack(fill="x", pady=(20, 0))
-        status_frame.pack_propagate(False)
-        
-        self.status_var = ctk.StringVar()
-        self.status_var.set("🚀 Ready to start scraping")
-        status_bar = ctk.CTkLabel(
-            status_frame,
-            textvariable=self.status_var,
-            font=ctk.CTkFont(size=12),
-            text_color=("gray50", "gray70"),
-            anchor="w"
-        )
-        status_bar.pack(fill="x", padx=15, pady=10)
-    
-    def create_enhanced_status_bar(self, parent):
-        """Create enhanced status bar with notifications and better contrast"""
-        status_container = ctk.CTkFrame(
-            parent, 
-            height=70, 
-            corner_radius=15,
-            fg_color=self.colors['bg_secondary'],
-            border_width=2,
-            border_color=self.colors['primary']
-        )
-        status_container.pack(fill="x", pady=(25, 0))
-        status_container.pack_propagate(False)
-        
-        # Status content frame
-        status_content = ctk.CTkFrame(status_container, fg_color="transparent")
-        status_content.pack(fill="both", expand=True, padx=25, pady=15)
-        
-        # Left side - Status text
-        status_left = ctk.CTkFrame(status_content, fg_color="transparent")
-        status_left.pack(side="left", fill="both", expand=True)
-        
-        self.status_var = ctk.StringVar()
-        self.status_var.set("🚀 Ready to start scraping")
-        self.status_label = ctk.CTkLabel(
-            status_left,
-            textvariable=self.status_var,
-            font=ctk.CTkFont(size=16, weight="bold"),
-            text_color=self.colors['text_primary'],
-            anchor="w"
-        )
-        self.status_label.pack(side="left", fill="x", expand=True)
-        
-        # Right side - Real-time info
-        status_right = ctk.CTkFrame(status_content, fg_color="transparent")
-        status_right.pack(side="right")
-        
-        # Live clock with enhanced styling
-        self.clock_label = ctk.CTkLabel(
-            status_right,
-            text=datetime.now().strftime("%H:%M:%S"),
-            font=ctk.CTkFont(size=14, weight="bold"),
-            text_color=self.colors['secondary']
-        )
-        self.clock_label.pack(side="right", padx=(25, 0))
-        
-        # Update clock
-        self.update_clock()
-        
-        # Notification area (hidden by default)
-        self.notification_frame = ctk.CTkFrame(
-            parent, 
-            height=50, 
-            corner_radius=10,
-            fg_color=self.colors['success']
-        )
-        # Don't pack initially - will be shown for notifications
-        
-        self.notification_label = ctk.CTkLabel(
-            self.notification_frame,
-            text="",
-            font=ctk.CTkFont(size=14, weight="bold"),
-            text_color="white"
-        )
-        self.notification_label.pack(expand=True)
-    
-    def setup_animations(self):
-        """Initialize animations and effects"""
-        # Title animation
-        self.animate_title()
-        
-        # Breathing effect for progress bar
-        self.breathing_effect()
-    
-    def animate_title(self):
-        """Animate the title with enhanced color transitions"""
-        if hasattr(self, 'title_label'):
-            colors = [
-                self.colors['success'], 
-                self.colors['primary'], 
-                self.colors['secondary'], 
-                self.colors['info'], 
-                self.colors['accent']
-            ]
-            current_color = getattr(self, '_title_color_index', 0)
-            
-            self.title_label.configure(text_color=colors[current_color])
-            self._title_color_index = (current_color + 1) % len(colors)
-            
-            # Schedule next animation (slower for better visibility)
-            self.root.after(4000, self.animate_title)
-    
-    def breathing_effect(self):
-        """Create breathing effect for progress bar"""
-        if hasattr(self, 'progress_bar') and self.animation_running:
-            # Simulate breathing by slightly changing opacity
-            pass  # CustomTkinter doesn't support opacity changes directly
-        
-        self.root.after(500, self.breathing_effect)
-    
-    def show_notification(self, message, notification_type="info", duration=3000):
-        """Show animated notification"""
-        colors = {
-            "success": self.colors['success'],
-            "warning": self.colors['warning'], 
-            "error": self.colors['danger'],
-            "info": self.colors['info']
-        }
-        
-        self.notification_frame.configure(fg_color=colors.get(notification_type, self.colors['info']))
-        self.notification_label.configure(text=message)
-        
-        # Slide in animation
-        self.notification_frame.pack(fill="x", pady=(10, 0))
-        
-        # Auto-hide after duration
-        self.root.after(duration, self.hide_notification)
-    
-    def hide_notification(self):
-        """Hide notification with animation"""
-        self.notification_frame.pack_forget()
-    
-    def update_clock(self):
-        """Update the live clock"""
-        if hasattr(self, 'clock_label'):
-            current_time = datetime.now().strftime("%H:%M:%S")
-            self.clock_label.configure(text=current_time)
-        
-        self.root.after(1000, self.update_clock)
-    
-    def update_quick_stats(self):
-        """Update the quick stats display"""
-        if self.df is not None:
-            total_jobs = len(self.df)
-            filtered_jobs = len(self.filtered_df) if self.filtered_df is not None else total_jobs
-            
-            stats_text = f"📊 {total_jobs} total jobs\n🔍 {filtered_jobs} filtered"
-            
-            if self.scraping_stats['start_time']:
-                elapsed = datetime.now() - self.scraping_stats['start_time']
-                stats_text += f"\n⏱️ {str(elapsed).split('.')[0]}"
-        else:
-            stats_text = "Ready to start scraping\nNo data loaded yet"
-        
-        if hasattr(self, 'quick_stats_text'):
-            self.quick_stats_text.configure(text=stats_text)
-    
-    def monitor_notifications(self):
-        """Monitor notification queue"""
-        try:
-            while True:
-                message, msg_type = self.notification_queue.get_nowait()
-                self.show_notification(message, msg_type)
-        except queue.Empty:
-            pass
-        
-        self.root.after(100, self.monitor_notifications)
-    
     def start_scraping(self):
         """Start the scraping process in a separate thread"""
         if self.scraping_thread and self.scraping_thread.is_alive():
@@ -935,7 +610,6 @@ Built with Python, Selenium, and CustomTkinter
         keyword = self.keyword_var.get().strip()
         location = self.location_var.get().strip()
         max_pages = self.max_pages_var.get()
-        headless = self.headless_var.get()
         
         if not keyword:
             messagebox.showerror("Error", "Please enter a search keyword!")
@@ -946,13 +620,11 @@ Built with Python, Selenium, and CustomTkinter
         self.stop_btn.configure(state="normal")
         self.progress_bar.set(0)
         self.progress_label.configure(text="Initializing scraper...")
-        self.status_var.set("🔄 Starting scraper...")
-        self.animation_running = True
+
+
         
-        # Update scraping stats
-        self.scraping_stats['start_time'] = datetime.now()
-        self.scraping_stats['total_jobs'] = 0
-        self.scraping_stats['pages_scraped'] = 0
+        # Initialize scraping start time
+        self.start_time = datetime.now()
         
         # Clear log
         self.log_text.delete("1.0", "end")
@@ -960,25 +632,30 @@ Built with Python, Selenium, and CustomTkinter
         self.log(f"🔍 Keyword: {keyword}")
         self.log(f"📍 Location: {location or 'All locations'}")
         self.log(f"📄 Max Pages: {max_pages}")
-        self.log(f"👻 Headless: {'Yes' if headless else 'No'}")
+
         self.log("-" * 50)
         
         # Show notification
-        self.show_notification("Scraping started! Monitor progress below.", "info")
+        print("🚀 Scraping started! Monitor progress below.")
         
         # Start scraping in separate thread
         self.scraping_thread = threading.Thread(
             target=self.scraping_worker,
-            args=(keyword, location, max_pages, headless),
+            args=(keyword, location, max_pages),
             daemon=True
         )
         self.scraping_thread.start()
     
-    def scraping_worker(self, keyword, location, max_pages, headless):
+    def scraping_worker(self, keyword, location, max_pages):
         """Worker function for scraping in separate thread"""
         try:
             # Initialize scraper
-            self.scraper = SimpleWuzzufScraper(headless=headless)
+            self.scraper = SimpleWuzzufScraper(headless=False)
+            
+            # Store search parameters for potential saving when stopping
+            self.scraper.current_keyword = keyword
+            self.scraper.current_location = location
+            self.scraper.current_max_pages = max_pages
             
             # Override print function to capture output
             original_print = print
@@ -1019,10 +696,55 @@ Built with Python, Selenium, and CustomTkinter
         """Stop the scraping process"""
         if self.scraper:
             try:
+                # Check if there's any data to save before stopping
+                if hasattr(self.scraper, 'jobs_data') and self.scraper.jobs_data:
+                    job_count = len(self.scraper.jobs_data)
+                    
+                    # Save the collected data
+                    try:
+                        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+                        keyword = getattr(self.scraper, 'current_keyword', 'unknown')
+                        filename_prefix = f"wuzzuf_jobs_{keyword.replace(' ', '_')}"
+                        
+                        session_folder = self.scraper.save_data(filename_prefix)
+                        
+                        self.log(f"💾 Saved {job_count} jobs before stopping to: {session_folder}")
+                        
+                        # Show stopped message with save info
+                        messagebox.showinfo(
+                            "⏹️ Scraping Stopped", 
+                            f"Job scraping has been stopped by the user.\n\n"
+                            f"✅ Saved {job_count} jobs collected before stopping!\n"
+                            f"📁 Data saved to: {Path(session_folder).name}"
+                        )
+                        
+                    except Exception as save_error:
+                        self.log(f"⚠️ Warning: Could not save data before stopping: {save_error}")
+                        
+                        # Show stopped message without save info
+                        messagebox.showinfo(
+                            "⏹️ Scraping Stopped", 
+                            f"Job scraping has been stopped by the user.\n\n"
+                            f"⚠️ Could not save {job_count} collected jobs due to an error.\n"
+                            f"Error: {save_error}"
+                        )
+                else:
+                    self.log("⏹️ Scraping stopped - no data collected yet")
+                    
+                    # Show stopped message for no data
+                    messagebox.showinfo(
+                        "⏹️ Scraping Stopped", 
+                        "Job scraping has been stopped by the user.\n\n"
+                        "No data was collected yet, so nothing to save."
+                    )
+                
+                # Now quit the driver
                 self.scraper.driver.quit()
                 self.log("⏹️ Scraping stopped by user")
-                self.status_var.set("⏹️ Scraping stopped")
-            except:
+
+                
+            except Exception as e:
+                self.log(f"⚠️ Error while stopping scraper: {e}")
                 pass
         
         # Reset UI
@@ -1039,6 +761,33 @@ Built with Python, Selenium, and CustomTkinter
                 
                 if message_type == 'log':
                     self.log(data)
+                    
+                    # Update progress based on log messages
+                    if "Found" in data and "job cards" in data:
+                        try:
+                            # Extract number of jobs found from message like "Found 15 job cards"
+                            import re
+                            match = re.search(r'Found (\d+) job cards', data)
+                            if match:
+                                jobs_found = int(match.group(1))
+                                # Update progress label to show current status
+                                self.progress_label.configure(text=f"Found {jobs_found} jobs on current page...")
+                        except:
+                            pass
+                    elif "📋" in data:
+                        # Job extracted, update progress
+                        try:
+                            # Count total jobs collected so far
+                            if hasattr(self, 'scraper') and hasattr(self.scraper, 'jobs_data'):
+                                total_jobs = len(self.scraper.jobs_data)
+                                self.progress_label.configure(text=f"Collected {total_jobs} jobs so far...")
+                                
+                                # Update progress bar (assuming max 100 jobs for now)
+                                if total_jobs <= 100:
+                                    progress = total_jobs / 100.0
+                                    self.progress_bar.set(progress)
+                        except:
+                            pass
                 elif message_type == 'complete':
                     # Handle new tuple format: (job_count, session_folder)
                     if isinstance(data, tuple):
@@ -1048,11 +797,9 @@ Built with Python, Selenium, and CustomTkinter
                         job_count = data
                         session_folder = "."
                     
-                    self.scraping_stats['end_time'] = datetime.now()
-                    self.scraping_stats['total_jobs'] = job_count
-                    self.animation_running = False
-                    
-                    elapsed = self.scraping_stats['end_time'] - self.scraping_stats['start_time']
+                    # Calculate elapsed time
+                    end_time = datetime.now()
+                    elapsed = end_time - self.start_time
                     elapsed_str = str(elapsed).split('.')[0]
                     
                     self.log(f"✅ Scraping completed! Collected {job_count} jobs in {elapsed_str}")
@@ -1067,22 +814,29 @@ Built with Python, Selenium, and CustomTkinter
                     # Update status with session folder info
                     if session_folder != ".":
                         session_name = Path(session_folder).name
-                        self.status_var.set(f"✅ Scraping completed - {job_count} jobs saved to {session_name}")
+                        pass  # Status update removed - status bar deleted
                     else:
-                        self.status_var.set(f"✅ Scraping completed - {job_count} jobs saved")
+                        pass  # Status update removed - status bar deleted
+                    
+                    # Show completion message box
+                    messagebox.showinfo(
+                        "🎉 Scraping Completed!", 
+                        f"Successfully collected {job_count} job listings!\n\n"
+                        f"Time taken: {elapsed_str}\n"
+                        f"Data saved to: {session_name if session_folder != '.' else 'CSV and JSON files'}"
+                    )
                     
                     # Reset UI
                     self.start_btn.configure(state="normal")
                     self.stop_btn.configure(state="disabled")
                     
-                    # Update quick stats
-                    self.update_quick_stats()
+
                     
                     # Show success notification
                     if session_folder != ".":
-                        self.show_notification(f"Scraping completed! {job_count} jobs saved to session folder in {elapsed_str}", "success", 5000)
+                        print(f"✅ Scraping completed! {job_count} jobs saved to session folder in {elapsed_str}")
                     else:
-                        self.show_notification(f"Scraping completed! {job_count} jobs saved to files in {elapsed_str}", "success", 5000)
+                        print(f"✅ Scraping completed! {job_count} jobs saved to files in {elapsed_str}")
                     
                     # Try to load the scraped data
                     self.load_latest_scraped_data()
@@ -1090,7 +844,14 @@ Built with Python, Selenium, and CustomTkinter
                 elif message_type == 'error':
                     self.log(f"❌ Error: {data}")
                     self.progress_label.configure(text="Error occurred")
-                    self.status_var.set("❌ Scraping error")
+
+                    
+                    # Show error message box
+                    messagebox.showerror(
+                        "❌ Scraping Error", 
+                        f"An error occurred during scraping:\n\n{data}\n\n"
+                        "Please check your internet connection and try again."
+                    )
                     
                     # Reset UI
                     self.start_btn.configure(state="normal")
@@ -1135,7 +896,6 @@ Built with Python, Selenium, and CustomTkinter
                 'search_keyword': self.keyword_var.get(),
                 'location': self.location_var.get(),
                 'max_pages': self.max_pages_var.get(),
-                'headless_mode': self.headless_var.get(),
                 'engineering_fields': fields
             }
             
@@ -1198,19 +958,17 @@ Built with Python, Selenium, and CustomTkinter
             # Display data
             self.display_data()
             self.update_statistics()
-            self.update_quick_stats()
-            self.update_insights()
             
-            self.status_var.set(f"✅ Loaded {len(self.df)} rows from {os.path.basename(file_path)}")
-            self.show_notification(f"Successfully loaded {len(self.df)} job records", "success")
+
+            print(f"✅ Successfully loaded {len(self.df)} job records")
             
         except Exception as e:
             messagebox.showerror("Error", f"Failed to load CSV file: {str(e)}")
-            self.status_var.set("❌ Error loading file")
-            self.show_notification("Failed to load CSV file", "error")
+
+            print("❌ Failed to load CSV file")
     
     def display_data(self):
-        """Display data in the treeview"""
+        """Display data in the treeview with enhanced scrolling"""
         if self.filtered_df is None:
             return
         
@@ -1223,21 +981,119 @@ Built with Python, Selenium, and CustomTkinter
         self.tree['columns'] = columns
         self.tree['show'] = 'headings'
         
-        # Set column headings
+        # Set column headings with better formatting
         for col in columns:
-            self.tree.heading(col, text=col)
-            # Adjust column width based on content
-            max_width = max(len(str(col)), 
-                           self.filtered_df[col].astype(str).str.len().max())
-            self.tree.column(col, width=min(max_width * 10, 300))
+            # Clean column name for display
+            display_name = col.replace('_', ' ').title()
+            self.tree.heading(col, text=display_name)
+            
+            # Calculate optimal column width based on content
+            col_width = len(display_name) * 12  # Base width for header
+            
+            # Check data content width
+            if len(self.filtered_df) > 0:
+                data_width = self.filtered_df[col].astype(str).str.len().max() * 10
+                col_width = max(col_width, data_width)
+            
+            # Set reasonable bounds for column width
+            col_width = max(100, min(col_width, 400))
+            self.tree.column(col, width=col_width, minwidth=80)
         
-        # Insert data rows
-        for idx, row in self.filtered_df.head(1000).iterrows():  # Limit to first 1000 rows for performance
-            values = [str(val) if pd.notna(val) else '' for val in row]
-            self.tree.insert('', 'end', values=values)
+        # Insert data rows with alternating row colors
+        for idx, row in self.filtered_df.head(2000).iterrows():  # Increased limit for better data viewing
+            values = []
+            for val in row:
+                if pd.isna(val):
+                    values.append('')
+                elif isinstance(val, list):
+                    # Handle list values (like skills) - show first few items
+                    if val:
+                        display_val = ', '.join(str(item) for item in val[:3])
+                        if len(val) > 3:
+                            display_val += f' (+{len(val)-3} more)'
+                        values.append(display_val)
+                    else:
+                        values.append('')
+                else:
+                    # Truncate long text values
+                    str_val = str(val)
+                    if len(str_val) > 100:
+                        str_val = str_val[:97] + '...'
+                    values.append(str_val)
+            
+            # Insert row with alternating colors
+            tag = 'evenrow' if idx % 2 == 0 else 'oddrow'
+            self.tree.insert('', 'end', values=values, tags=(tag,))
         
-        if len(self.filtered_df) > 1000:
-            self.status_var.set(f"📊 Showing first 1000 of {len(self.filtered_df)} rows")
+        # Configure alternating row colors
+        self.tree.tag_configure('evenrow', background=self.colors['bg_secondary'])
+        self.tree.tag_configure('oddrow', background=self.colors['bg_primary'])
+        
+        # Update scrollbar ranges
+        self.tree.yview_moveto(0)  # Reset to top
+        self.tree.xview_moveto(0)  # Reset to left
+        
+        # Show data summary
+        total_rows = len(self.filtered_df)
+        displayed_rows = min(total_rows, 2000)
+        if total_rows > displayed_rows:
+            print(f"📊 Displaying {displayed_rows} of {total_rows} rows (use scrollbars to view more)")
+        else:
+            print(f"📊 Displaying all {total_rows} rows")
+    
+    def on_mousewheel(self, event):
+        """Handle mouse wheel scrolling for the treeview"""
+        try:
+            if event.num == 4:  # Linux scroll up
+                self.tree.yview_scroll(-1, "units")
+            elif event.num == 5:  # Linux scroll down
+                self.tree.yview_scroll(1, "units")
+            else:  # Windows/Mac scroll
+                self.tree.yview_scroll(int(-1 * (event.delta / 120)), "units")
+        except:
+            # Fallback for different platforms
+            try:
+                self.tree.yview_scroll(int(-1 * (event.delta / 120)), "units")
+            except:
+                pass
+    
+    def select_all_rows(self, event=None):
+        """Select all rows in the treeview"""
+        try:
+            for item in self.tree.get_children():
+                self.tree.selection_add(item)
+        except:
+            pass
+    
+    def show_table_tooltip(self, event=None):
+        """Show tooltip for table navigation"""
+        try:
+            # Create tooltip window
+            tooltip = tk.Toplevel()
+            tooltip.wm_overrideredirect(True)
+            tooltip.wm_geometry(f"+{event.x_root+10}+{event.y_root+10}")
+            
+            # Tooltip content
+            tooltip_label = tk.Label(
+                tooltip, 
+                text="💡 Tip: Use mouse wheel to scroll, Ctrl+A to select all",
+                background=self.colors['primary'],
+                foreground=self.colors['white'],
+                relief="solid",
+                borderwidth=1,
+                font=("Arial", 9)
+            )
+            tooltip_label.pack()
+            
+            # Auto-hide after 3 seconds
+            tooltip.after(3000, tooltip.destroy)
+            
+        except:
+            pass
+    
+    def hide_table_tooltip(self, event=None):
+        """Hide table tooltip"""
+        pass  # Tooltip auto-hides
     
     def filter_data(self, event=None):
         """Filter data based on search term"""
@@ -1261,7 +1117,7 @@ Built with Python, Selenium, and CustomTkinter
         
         self.display_data()
         self.update_statistics()
-        self.status_var.set(f"🔍 Filtered: {len(self.filtered_df)} rows")
+        
     
     def clear_filters(self):
         """Clear all filters and show original data"""
@@ -1270,7 +1126,7 @@ Built with Python, Selenium, and CustomTkinter
             self.filtered_df = self.df.copy()
             self.display_data()
             self.update_statistics()
-            self.status_var.set(f"📊 Showing all {len(self.df)} rows")
+
     
     def update_statistics(self):
         """Update statistics display"""
@@ -1308,7 +1164,7 @@ Built with Python, Selenium, and CustomTkinter
             try:
                 self.filtered_df.to_csv(filename, index=False)
                 messagebox.showinfo("Success", f"Data exported to {filename}")
-                self.status_var.set(f"✅ Exported {len(self.filtered_df)} rows to {os.path.basename(filename)}")
+    
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to export: {str(e)}")
     
@@ -1328,162 +1184,9 @@ Built with Python, Selenium, and CustomTkinter
             try:
                 self.df.to_csv(filename, index=False)
                 messagebox.showinfo("Success", f"All data exported to {filename}")
-                self.status_var.set(f"✅ Exported {len(self.df)} rows to {os.path.basename(filename)}")
+    
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to export: {str(e)}")
-    
-    def generate_chart(self):
-        """Generate analytics chart based on selected type"""
-        if not MATPLOTLIB_AVAILABLE:
-            self.show_notification("Matplotlib not available. Please install: pip install matplotlib", "error")
-            return
-            
-        if self.df is None:
-            self.show_notification("Please load data first!", "warning")
-            return
-        
-        chart_type = self.chart_type_var.get()
-        
-        try:
-            # Clear previous chart
-            for widget in self.chart_container.winfo_children():
-                widget.destroy()
-            
-            # Set up matplotlib for dark theme
-            try:
-                plt.style.use('dark_background')
-            except:
-                # Fallback if dark_background style is not available
-                plt.style.use('default')
-            
-            fig, ax = plt.subplots(figsize=(12, 6))
-            fig.patch.set_facecolor('#2b2b2b')
-            ax.set_facecolor('#2b2b2b')
-            
-            if chart_type == "Job Count by Company":
-                company_counts = self.df['company'].value_counts().head(10)
-                bars = ax.bar(range(len(company_counts)), company_counts.values, 
-                             color=self.colors['primary'], alpha=0.8)
-                ax.set_xlabel('Companies', color='white', fontsize=12)
-                ax.set_ylabel('Number of Jobs', color='white', fontsize=12)
-                ax.set_title('Top 10 Companies by Job Count', color='white', fontsize=14, fontweight='bold')
-                ax.set_xticks(range(len(company_counts)))
-                ax.set_xticklabels(company_counts.index, rotation=45, ha='right', color='white')
-                ax.tick_params(colors='white')
-                
-                # Add value labels on bars
-                for bar, value in zip(bars, company_counts.values):
-                    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.1,
-                           str(value), ha='center', va='bottom', color='white', fontweight='bold')
-            
-            elif chart_type == "Experience Level Distribution":
-                exp_counts = self.df['experience_level'].value_counts()
-                colors_pie = [self.colors['primary'], self.colors['secondary'], 
-                             self.colors['info'], self.colors['accent'], self.colors['success']]
-                wedges, texts, autotexts = ax.pie(exp_counts.values, labels=exp_counts.index, 
-                                                 autopct='%1.1f%%', colors=colors_pie[:len(exp_counts)])
-                ax.set_title('Experience Level Distribution', color='white', fontsize=14, fontweight='bold')
-                for text in texts + autotexts:
-                    text.set_color('white')
-                    text.set_fontweight('bold')
-            
-            elif chart_type == "Skills Frequency":
-                # Extract skills from the skills column (assuming it's a list or comma-separated)
-                all_skills = []
-                for skills in self.df['skills'].dropna():
-                    if isinstance(skills, str):
-                        if skills.startswith('[') and skills.endswith(']'):
-                            # Handle list-like strings
-                            skills = skills.strip('[]').replace("'", "").replace('"', '')
-                        skill_list = [s.strip() for s in skills.split(',')]
-                        all_skills.extend(skill_list)
-                
-                skill_counts = pd.Series(all_skills).value_counts().head(15)
-                bars = ax.barh(range(len(skill_counts)), skill_counts.values, 
-                              color=self.colors['info'], alpha=0.8)
-                ax.set_ylabel('Skills', color='white', fontsize=12)
-                ax.set_xlabel('Frequency', color='white', fontsize=12)
-                ax.set_title('Top 15 Most Demanded Skills', color='white', fontsize=14, fontweight='bold')
-                ax.set_yticks(range(len(skill_counts)))
-                ax.set_yticklabels(skill_counts.index, color='white')
-                ax.tick_params(colors='white')
-                
-                # Add value labels
-                for bar, value in zip(bars, skill_counts.values):
-                    ax.text(bar.get_width() + 0.1, bar.get_y() + bar.get_height()/2,
-                           str(value), ha='left', va='center', color='white', fontweight='bold')
-            
-            elif chart_type == "Location Analysis":
-                location_counts = self.df['location'].value_counts().head(10)
-                bars = ax.bar(range(len(location_counts)), location_counts.values, 
-                             color=self.colors['success'], alpha=0.8)
-                ax.set_xlabel('Locations', color='white', fontsize=12)
-                ax.set_ylabel('Number of Jobs', color='white', fontsize=12)
-                ax.set_title('Job Distribution by Location', color='white', fontsize=14, fontweight='bold')
-                ax.set_xticks(range(len(location_counts)))
-                ax.set_xticklabels(location_counts.index, rotation=45, ha='right', color='white')
-                ax.tick_params(colors='white')
-                
-                for bar, value in zip(bars, location_counts.values):
-                    ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.1,
-                           str(value), ha='center', va='bottom', color='white', fontweight='bold')
-            
-            elif chart_type == "Job Type Distribution":
-                type_counts = self.df['job_type'].value_counts()
-                colors_pie = [self.colors['warning'], self.colors['danger'], 
-                             self.colors['info'], self.colors['success']]
-                wedges, texts, autotexts = ax.pie(type_counts.values, labels=type_counts.index, 
-                                                 autopct='%1.1f%%', colors=colors_pie[:len(type_counts)])
-                ax.set_title('Job Type Distribution', color='white', fontsize=14, fontweight='bold')
-                for text in texts + autotexts:
-                    text.set_color('white')
-                    text.set_fontweight('bold')
-            
-            plt.tight_layout()
-            
-            # Create canvas and add to container
-            canvas = FigureCanvasTkAgg(fig, self.chart_container)
-            canvas.draw()
-            canvas.get_tk_widget().pack(fill="both", expand=True)
-            
-            # Store figure for export
-            self.current_figure = fig
-            
-            # Update insights
-            self.update_insights()
-            
-            self.show_notification(f"Chart generated: {chart_type}", "success")
-            
-        except Exception as e:
-            self.show_notification(f"Error generating chart: {str(e)}", "error")
-            print(f"Chart generation error: {e}")
-    
-    def export_chart(self):
-        """Export current chart to file"""
-        if not hasattr(self, 'current_figure'):
-            self.show_notification("No chart to export. Generate a chart first!", "warning")
-            return
-        
-        filename = filedialog.asksaveasfilename(
-            title="Export Chart",
-            defaultextension=".png",
-            filetypes=[("PNG files", "*.png"), ("PDF files", "*.pdf"), ("SVG files", "*.svg")]
-        )
-        
-        if filename:
-            try:
-                self.current_figure.savefig(filename, dpi=300, bbox_inches='tight', 
-                                          facecolor='#2b2b2b', edgecolor='none')
-                self.show_notification(f"Chart exported to {os.path.basename(filename)}", "success")
-            except Exception as e:
-                self.show_notification(f"Export failed: {str(e)}", "error")
-    
-    def update_insights(self):
-        """Update data insights based on current data"""
-        if self.df is None:
-            return
-        
-        insights = []
         
         # Basic statistics
         total_jobs = len(self.df)
@@ -1547,34 +1250,24 @@ Built with Python, Selenium, and CustomTkinter
         self.insights_text.insert("1.0", insights_text)
         self.insights_text.configure(state="disabled")
     
-    def show_matplotlib_info(self):
-        """Show information about installing matplotlib"""
-        info_message = """
-Matplotlib is required for data visualization features.
 
-To install matplotlib and enable chart generation:
-
-1. Open your terminal/command prompt
-2. Run: pip install matplotlib seaborn pillow
-3. Restart the application
-
-This will enable:
-• Interactive charts and graphs
-• Data visualization
-• Chart export functionality
-• Enhanced analytics features
-        """
-        
-        messagebox.showinfo("Install Matplotlib", info_message.strip())
-        self.show_notification("Install matplotlib to enable chart features", "info", 5000)
     
     def run(self):
         """Start the GUI application"""
         self.root.mainloop()
 
 def main():
-    app = WuzzufScraperGUI()
-    app.run()
+    """Main application entry point"""
+    try:
+        print("🚀 Launching Wuzzuf Job Scraper Pro...")
+        app = WuzzufScraperGUI()
+        app.run()
+    except ImportError as e:
+        print(f"❌ Error: Could not import required modules: {e}")
+        print("💡 Please install required dependencies: pip install -r requirements.txt")
+    except Exception as e:
+        print(f"❌ Unexpected error: {e}")
+        print("💡 Please check your installation and try again")
 
 if __name__ == "__main__":
     main()
