@@ -194,6 +194,12 @@ This tool makes it super easy to collect job market data from Wuzzuf.net. Whethe
 
 ---
 
-*Built with Python, Selenium, and CustomTkinter for a smooth, professional experience.*
+---
+
+⚠️ **Disclaimer**  
+This project is created **for educational purposes only** to demonstrate Python, Selenium, and GUI development skills.  
+All job data belongs to **[Wuzzuf.net](https://wuzzuf.net/)**, and the platform should be credited as the original source of information.  
+
+---
 
 *Copyright © 2025 Ahmed Haitham Amer*
