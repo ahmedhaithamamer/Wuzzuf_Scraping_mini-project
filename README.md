@@ -22,7 +22,7 @@
 ## 🎥 **Video Demonstrations**
 
 ### 🚀 **Quick Start Guide**
-![Quick Start Video](https://github.com/user-attachments/assets/ddea1e29-a374-4f75-9592-24d3813469f9)
+[Quick Start Video](https://github.com/user-attachments/assets/ddea1e29-a374-4f75-9592-24d3813469f9)
 
 ## 🎯 What This Tool Does
 
