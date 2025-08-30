@@ -15,7 +15,8 @@
 *Clean table display of collected job data with search and filter options*
 
 ### 💻 **Console Interface**
-![Console Menu](images/console_interface.png)
+<img width="497" height="243" alt="Screenshot 2025-08-30 205121" src="https://github.com/user-attachments/assets/1d58dbee-4dbc-478c-98c6-324e4f685f0c" />
+
 *Simple text-based menu for console users*
 
 ## 🎥 **Video Demonstrations**
