@@ -1,0 +1,14 @@
+📸 IMAGES PLACEHOLDER
+
+This folder should contain the following screenshots:
+
+1. main_interface.png - Main GUI window screenshot
+2. scraping_progress.png - Scraping progress screenshot  
+3. data_viewer.png - Data viewer tab screenshot
+4. console_interface.png - Console menu screenshot
+5. video_thumbnail_quickstart.png - Quick start video thumbnail
+6. video_thumbnail_workflow.png - Workflow video thumbnail
+7. video_thumbnail_analysis.png - Analysis video thumbnail
+
+Please replace this file with actual PNG/JPG screenshots.
+See README.md in this folder for detailed specifications.

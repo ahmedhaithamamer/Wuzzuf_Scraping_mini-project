@@ -1,0 +1,10 @@
+🎥 VIDEOS PLACEHOLDER
+
+This folder should contain the following video demonstrations:
+
+1. quick_start_demo.mp4 - Quick start guide (2-3 minutes)
+2. complete_workflow_demo.mp4 - Complete workflow demo (5-7 minutes)  
+3. data_analysis_demo.mp4 - Data analysis features (3-4 minutes)
+
+Please replace this file with actual MP4 video files.
+See README.md in this folder for detailed specifications and recording guidelines.

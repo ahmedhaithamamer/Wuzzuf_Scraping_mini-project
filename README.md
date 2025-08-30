@@ -2,6 +2,38 @@
 
 **A simple and powerful tool to collect job listings from Wuzzuf.net with a beautiful, easy-to-use interface.**
 
+## 📸 **Screenshots & Demo**
+
+### 🖥️ **Main Interface**
+![Main GUI Interface](images/main_interface.png)
+*The beautiful dark-themed main interface with tabs for scraping and data viewing*
+
+### 🔍 **Scraping in Action**
+![Scraping Progress](images/scraping_progress.png)
+*Real-time progress tracking during job scraping*
+
+### 📊 **Data Viewer**
+![Data Table](images/data_viewer.png)
+*Clean table display of collected job data with search and filter options*
+
+### 💻 **Console Interface**
+![Console Menu](images/console_interface.png)
+*Simple text-based menu for console users*
+
+## 🎥 **Video Demonstrations**
+
+### 🚀 **Quick Start Guide**
+[![Quick Start Video](images/video_thumbnail_quickstart.png)](videos/quick_start_demo.mp4)
+*Watch how to get started in under 2 minutes*
+
+### 🔍 **Complete Scraping Workflow**
+[![Scraping Workflow Video](images/video_thumbnail_workflow.png)](videos/complete_workflow_demo.mp4)
+*See the full process from search to data export*
+
+### 📊 **Data Analysis Features**
+[![Data Analysis Video](images/video_thumbnail_analysis.png)](videos/data_analysis_demo.mp4)
+*Learn how to filter, search, and export your collected data*
+
 ## 🎯 What This Tool Does
 
 This application helps you:
@@ -127,6 +159,33 @@ After scraping, you'll find:
 - **Summary files** showing what was collected
 
 All files are saved with timestamps so you can keep track of different scraping sessions.
+
+## 📁 **Project Structure**
+
+```
+Wuzzuf_Scraping_mini-project/
+├── 📱 wuzzuf_gui.py              # Main GUI application
+├── 🕷️ simple_wuzzuf_scraper.py   # Core scraping engine
+├── 💻 run_scraper.py             # Console launcher
+├── ⚙️ simple_config.py           # Configuration file
+├── 📋 requirements.txt           # Python dependencies
+├── 📖 README.md                  # This documentation
+├── 📸 images/                    # Screenshots and thumbnails
+│   ├── main_interface.png
+│   ├── scraping_progress.png
+│   ├── data_viewer.png
+│   ├── console_interface.png
+│   ├── video_thumbnail_quickstart.png
+│   ├── video_thumbnail_workflow.png
+│   └── video_thumbnail_analysis.png
+├── 🎥 videos/                    # Video demonstrations
+│   ├── quick_start_demo.mp4
+│   ├── complete_workflow_demo.mp4
+│   └── data_analysis_demo.mp4
+├── 📊 Data/                      # Scraped job data
+│   └── scraping_sessions/        # Organized by date
+└── 🎨 Custom_themes/             # GUI theme files
+```
 
 ## 💡 Tips for Best Results
 
